@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -48,6 +49,20 @@ namespace GitUI
                 _NO_TRANSLATE_To.Text = Settings.WorkingDir;
 
             FromTextUpdate(null, null);
+
+			Ok.DataBindings.Add("Enabled",
+									new DatabindHelper<bool>(
+													() => _NO_TRANSLATE_To.Text.Length > 0 &&
+															_NO_TRANSLATE_From.Text.Length > 0 &&
+															_NO_TRANSLATE_NewDirectory.Text.Length > 0,
+
+													handler =>
+													{
+														_NO_TRANSLATE_To.TextChanged += handler;
+														_NO_TRANSLATE_From.TextChanged += handler;
+														_NO_TRANSLATE_NewDirectory.TextChanged += handler;
+													}),
+								"Value");
         }
 
         private void OkClick(object sender, EventArgs e)
@@ -263,4 +278,39 @@ namespace GitUI
             Branches.DataSource = GitCommandHelpers.GetRemoteHeads(_NO_TRANSLATE_From.Text, false, true);
         }
     }
+
+	class DatabindHelper<T> : INotifyPropertyChanged
+	{
+		private readonly Func<T> _extractor;
+
+		public DatabindHelper(Func<T> extractor, Action<EventHandler> handlerSetter)
+		{
+			_extractor = extractor;
+			handlerSetter(Handler);
+		}
+
+		public T Value
+		{
+			get
+			{
+				return _extractor();
+			}
+
+			set
+			{
+				Handler(this, null);
+			}
+		}
+
+		private void Handler(object sender, EventArgs e)
+		{
+			var handler = PropertyChanged;
+			if (handler != null)
+			{
+				handler(this, new PropertyChangedEventArgs("Value"));
+			}
+		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
+	}
 }

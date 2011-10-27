@@ -290,11 +290,13 @@ namespace GitUI
                 return false;
 
             var form = new FormClone();
-            form.ShowDialog();
+			if (form.ShowDialog() == DialogResult.OK)
+			{
+				InvokeEvent(PostClone);
+				return true;
+			}
 
-            InvokeEvent(PostClone);
-
-            return true;
+        	return false;
         }
 
 
