@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
@@ -52,13 +53,12 @@ namespace GitUI
 
 			Ok.DataBindings.Add("Enabled",
 									new DatabindHelper<bool>(
-													() => _NO_TRANSLATE_To.Text.Length > 0 &&
-															_NO_TRANSLATE_From.Text.Length > 0 &&
-															_NO_TRANSLATE_NewDirectory.Text.Length > 0,
+													() =>	//_NO_TRANSLATE_To.Text.Length > 0 &&
+															_NO_TRANSLATE_From.Text.Length > 0,
 
 													handler =>
 													{
-														_NO_TRANSLATE_To.TextChanged += handler;
+														//_NO_TRANSLATE_To.TextChanged += handler;
 														_NO_TRANSLATE_From.TextChanged += handler;
 														_NO_TRANSLATE_NewDirectory.TextChanged += handler;
 													}),
@@ -69,15 +69,7 @@ namespace GitUI
         {
             try
             {
-                var dirTo = _NO_TRANSLATE_To.Text;
-                if (!dirTo.EndsWith(Settings.PathSeparator.ToString()) && !dirTo.EndsWith(Settings.PathSeparatorWrong.ToString()))
-                    dirTo += Settings.PathSeparator.ToString();
-
-                dirTo += _NO_TRANSLATE_NewDirectory.Text;
-
-                Repositories.RepositoryHistory.AddMostRecentRepository(_NO_TRANSLATE_From.Text);
-                Repositories.RepositoryHistory.AddMostRecentRepository(dirTo);
-
+                var dirTo = TargetDirectory();
 
                 var fromProcess =
                     new FormRemoteProcess(Settings.GitCommand,
@@ -97,7 +89,11 @@ namespace GitUI
                         AskIfSubmodulesShouldBeInitialized())
                         InitSubmodules();
                 }
-                Close();
+				
+				Repositories.RepositoryHistory.AddMostRecentRepository(_NO_TRANSLATE_From.Text);
+				Repositories.RepositoryHistory.AddMostRecentRepository(dirTo);
+
+				Close();
             }
             catch (Exception ex)
             {
@@ -105,7 +101,16 @@ namespace GitUI
             }
         }
 
-        private bool AskIfNewRepositoryShouldBeOpened(string dirTo)
+    	private string TargetDirectory()
+    	{
+    		var dirTo = _NO_TRANSLATE_To.Text;
+    		if (!dirTo.EndsWith(Settings.PathSeparator.ToString()) && !dirTo.EndsWith(Settings.PathSeparatorWrong.ToString()))
+    			dirTo += Settings.PathSeparator.ToString();
+
+    		return dirTo + _NO_TRANSLATE_NewDirectory.Text;
+    	}
+
+    	private bool AskIfNewRepositoryShouldBeOpened(string dirTo)
         {
             return MessageBox.Show(string.Format(_questionOpenRepo.Text, dirTo), _questionOpenRepoCaption.Text,
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
@@ -275,8 +280,14 @@ namespace GitUI
         private void Branches_DropDown(object sender, EventArgs e)
         {
             Branches.DisplayMember = "LocalName";
-            Branches.DataSource = GitCommandHelpers.GetRemoteHeads(_NO_TRANSLATE_From.Text, false, true);
+            Branches.DataSource = InjectEmptyRemoteHead(GitCommandHelpers.GetRemoteHeads(_NO_TRANSLATE_From.Text, false, true));
         }
+
+    	private IList<GitHead> InjectEmptyRemoteHead(List<GitHead> original)
+    	{
+    		original.Insert(0, new GitHead("", ""));
+    		return original;
+    	}
     }
 
 	class DatabindHelper<T> : INotifyPropertyChanged
